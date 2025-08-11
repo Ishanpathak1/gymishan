@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0f172a" />
+    <title>GYMISHAN – Cardio Proof</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="header-row">
+        <div>
+          <h1>GYMISHAN</h1>
+          <p class="subtitle">Cardio proof, camera-only</p>
+        </div>
+        <div class="auth">
+          <span id="user-badge" class="user-badge" hidden></span>
+          <button id="sign-in" class="btn primary">Sign in</button>
+          <button id="sign-out" class="btn ghost" hidden>Sign out</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="card" id="config-section">
+        <h2>Setup</h2>
+        <div class="row">
+          <label for="total-mins">Total cardio (minutes)</label>
+          <input id="total-mins" type="number" inputmode="numeric" min="5" step="1" value="60" />
+        </div>
+        <div class="row">
+          <label for="slack-mins">Slack window (± minutes)</label>
+          <input id="slack-mins" type="number" inputmode="numeric" min="0" max="5" step="1" value="1" />
+        </div>
+
+        <div class="row">
+          <label>Machines</label>
+          <div id="machines-list" class="chips"></div>
+          <div class="add-machine">
+            <input id="new-machine" type="text" placeholder="Add machine (e.g., StairMaster)" />
+            <button id="add-machine-btn" class="btn ghost">Add</button>
+          </div>
+        </div>
+
+        <div class="row actions">
+          <button id="generate-plan" class="btn primary">Generate plan</button>
+          <button id="reset-plan" class="btn danger outline" disabled>Reset</button>
+        </div>
+      </section>
+
+      <section class="card" id="enroll-section" hidden>
+        <h2>Enroll machine</h2>
+        <p id="enroll-machine-label" class="subtitle"></p>
+        <div class="camera">
+          <video id="enroll-video" playsinline autoplay muted></video>
+          <canvas id="enroll-canvas" class="hidden" aria-hidden="true"></canvas>
+          <div class="row actions">
+            <button id="enroll-open" class="btn">Open camera</button>
+            <button id="enroll-capture" class="btn primary" disabled>Capture reference</button>
+            <button id="enroll-close" class="btn ghost" hidden>Close</button>
+            <button id="enroll-done" class="btn ghost">Done</button>
+          </div>
+          <div class="hint">Center the console so the screen and controls are visible. Use similar framing during proofs.</div>
+        </div>
+      </section>
+
+      <section class="card" id="plan-section" hidden>
+        <h2>Today's Plan</h2>
+        <ol id="plan-list" class="plan-list"></ol>
+        <div class="hint">Order is locked for this session.</div>
+        <div class="row actions">
+          <button id="start-session" class="btn primary">Start session</button>
+        </div>
+      </section>
+
+      <section class="card" id="session-section" hidden>
+        <h2 id="segment-title">Segment</h2>
+        <div class="timer">
+          <div class="count primary-text" id="countdown">--:--</div>
+          <div class="window" id="window-label">Window: --:-- to --:--</div>
+          <div class="status" id="status-label"></div>
+        </div>
+
+        <div class="camera">
+          <video id="camera-stream" playsinline autoplay muted></video>
+          <canvas id="capture-canvas" class="hidden" aria-hidden="true"></canvas>
+          <div class="row actions">
+            <button id="open-camera" class="btn">Open camera</button>
+            <button id="capture-btn" class="btn primary" disabled>Capture proof</button>
+            <button id="close-camera" class="btn ghost" hidden>Close</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card" id="done-section" hidden>
+        <h2>Great job</h2>
+        <p>You completed today's cardio plan. This day is now marked as done.</p>
+        <div class="row actions">
+          <button id="new-plan" class="btn">New plan</button>
+        </div>
+      </section>
+
+      <section class="card" id="calendar-section">
+        <h2>Month View</h2>
+        <div class="calendar-header">
+          <button id="prev-month" class="btn ghost">◀</button>
+          <div id="month-label" class="month-label"></div>
+          <button id="next-month" class="btn ghost">▶</button>
+        </div>
+        <div class="calendar" id="calendar-grid"></div>
+        <div class="legend">
+          <span class="dot done"></span> Done
+          <span class="dot missed"></span> Missed
+          <span class="dot future"></span> Future
+        </div>
+      </section>
+
+      <section class="card info">
+        <h2>Notes</h2>
+        <ul>
+          <li>Camera-only capture. No gallery uploads.</li>
+          <li>Each segment allows a ± slack minute window to capture proof.</li>
+          <li>Second segment's timer starts when you capture the first photo.</li>
+          <li>Images are not uploaded or stored; only timestamps are saved locally.</li>
+        </ul>
+      </section>
+    </main>
+
+    <footer class="app-footer">Built for me. Privacy-first. 📱</footer>
+
+    <script src="./firebase-config.js"></script>
+    <script src="./app.js" type="module"></script>
+  </body>
+  </html>
+
