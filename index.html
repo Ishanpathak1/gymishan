@@ -16,8 +16,8 @@
         </div>
         <div class="auth">
           <span id="user-badge" class="user-badge" hidden></span>
-          <button id="sign-in" class="btn primary">Sign in</button>
-          <button id="sign-out" class="btn ghost" hidden>Sign out</button>
+          <button id="sign-in" class="btn primary" type="button">Sign in</button>
+          <button id="sign-out" class="btn ghost" type="button" hidden>Sign out</button>
         </div>
       </div>
     </header>
@@ -39,13 +39,13 @@
           <div id="machines-list" class="chips"></div>
           <div class="add-machine">
             <input id="new-machine" type="text" placeholder="Add machine (e.g., StairMaster)" />
-            <button id="add-machine-btn" class="btn ghost">Add</button>
+            <button id="add-machine-btn" class="btn ghost" type="button">Add</button>
           </div>
         </div>
 
         <div class="row actions">
-          <button id="generate-plan" class="btn primary">Generate plan</button>
-          <button id="reset-plan" class="btn danger outline" disabled>Reset</button>
+          <button id="generate-plan" class="btn primary" type="button">Generate plan</button>
+          <button id="reset-plan" class="btn danger outline" type="button" disabled>Reset</button>
         </div>
       </section>
 
@@ -56,10 +56,10 @@
           <video id="enroll-video" playsinline autoplay muted></video>
           <canvas id="enroll-canvas" class="hidden" aria-hidden="true"></canvas>
           <div class="row actions">
-            <button id="enroll-open" class="btn">Open camera</button>
-            <button id="enroll-capture" class="btn primary" disabled>Capture reference</button>
-            <button id="enroll-close" class="btn ghost" hidden>Close</button>
-            <button id="enroll-done" class="btn ghost">Done</button>
+            <button id="enroll-open" class="btn" type="button">Open camera</button>
+            <button id="enroll-capture" class="btn primary" type="button" disabled>Capture reference</button>
+            <button id="enroll-close" class="btn ghost" type="button" hidden>Close</button>
+            <button id="enroll-done" class="btn ghost" type="button">Done</button>
           </div>
           <div class="hint">Center the console so the screen and controls are visible. Use similar framing during proofs.</div>
         </div>
@@ -70,8 +70,8 @@
         <ol id="plan-list" class="plan-list"></ol>
         <div class="hint">Order is locked for this session.</div>
         <div class="row actions">
-          <button id="start-session" class="btn primary">Start session</button>
-          <button id="delete-plan" class="btn danger outline">Delete plan</button>
+          <button id="start-session" class="btn primary" type="button">Start session</button>
+          <button id="delete-plan" class="btn danger outline" type="button">Delete plan</button>
         </div>
       </section>
 
@@ -90,9 +90,9 @@
           </div>
           <canvas id="capture-canvas" class="hidden" aria-hidden="true"></canvas>
           <div class="row actions">
-            <button id="open-camera" class="btn">Open camera</button>
-            <button id="capture-btn" class="btn primary" disabled>Capture proof</button>
-            <button id="close-camera" class="btn ghost" hidden>Close</button>
+            <button id="open-camera" class="btn" type="button">Open camera</button>
+            <button id="capture-btn" class="btn primary" type="button" disabled>Capture proof</button>
+            <button id="close-camera" class="btn ghost" type="button" hidden>Close</button>
           </div>
           <div class="row">
             <label><input type="checkbox" id="show-overlay" /> Show alignment overlay (uses enrolled aspect)</label>
@@ -104,16 +104,16 @@
         <h2>Great job</h2>
         <p>You completed today's cardio plan. This day is now marked as done.</p>
         <div class="row actions">
-          <button id="new-plan" class="btn">New plan</button>
+          <button id="new-plan" class="btn" type="button">New plan</button>
         </div>
       </section>
 
       <section class="card" id="calendar-section">
         <h2>Month View</h2>
         <div class="calendar-header">
-          <button id="prev-month" class="btn ghost">◀</button>
+          <button id="prev-month" class="btn ghost" type="button">◀</button>
           <div id="month-label" class="month-label"></div>
-          <button id="next-month" class="btn ghost">▶</button>
+          <button id="next-month" class="btn ghost" type="button">▶</button>
         </div>
         <div class="calendar" id="calendar-grid"></div>
         <div class="legend">
@@ -145,10 +145,10 @@
           </div>
           <canvas id="test-canvas" class="hidden" aria-hidden="true"></canvas>
           <div class="row actions">
-            <button id="test-open" class="btn">Open camera</button>
-            <button id="test-capture" class="btn primary" disabled>Test capture</button>
-            <button id="test-close" class="btn ghost" hidden>Close</button>
-            <button id="toggle-dev" class="btn ghost">Hide</button>
+            <button id="test-open" class="btn" type="button">Open camera</button>
+            <button id="test-capture" class="btn primary" type="button" disabled>Test capture</button>
+            <button id="test-close" class="btn ghost" type="button" hidden>Close</button>
+            <button id="toggle-dev" class="btn ghost" type="button">Hide</button>
           </div>
         </div>
         <div id="test-result" class="subtitle"></div>

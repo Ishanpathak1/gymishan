@@ -280,15 +280,39 @@ function tick() {
 
 async function openCamera() {
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+    // Stop any previous stream
+    if (state.cameraStream) {
+      state.cameraStream.getTracks().forEach((t) => t.stop());
+      state.cameraStream = null;
+    }
+    // iOS/Safari helpers
+    try { videoEl.setAttribute('playsinline', 'true'); } catch {}
+    try { videoEl.setAttribute('autoplay', 'true'); } catch {}
+    try { videoEl.muted = true; } catch {}
+
+    let stream;
+    // Try back camera first
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 1920 } },
+        audio: false,
+      });
+    } catch (errEnv) {
+      // Fallback to any available camera
+      stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    }
+
     state.cameraStream = stream;
     videoEl.srcObject = stream;
+    try { await videoEl.play(); } catch {}
+
     openCameraBtn.disabled = true;
     closeCameraBtn.hidden = false;
     captureBtn.disabled = false;
     drawOverlay();
   } catch (e) {
-    alert("Camera permission is required. Please enable it in your browser settings.");
+    const msg = (e && e.name) ? `${e.name}: ${e.message || ''}` : 'Unknown error';
+    alert(`Unable to open camera. ${msg}.\nHints: Use HTTPS (or localhost), allow camera permissions in browser/site settings, and reload.`);
   }
 }
 
@@ -691,7 +715,61 @@ function boot() {
   initFirebaseAuth();
 }
 
-document.addEventListener("DOMContentLoaded", boot);
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", boot);
+} else {
+  // If script loads after DOMContentLoaded already fired
+  boot();
+}
+
+// Fallback event delegation in case any direct listeners miss
+document.addEventListener('click', (ev) => {
+  const t = ev.target;
+  if (!(t instanceof Element)) return;
+  if (t.id === 'open-camera') { ev.preventDefault(); openCamera(); }
+  if (t.id === 'close-camera') { ev.preventDefault(); closeCamera(); }
+  if (t.id === 'capture-btn') { ev.preventDefault(); const btn = document.querySelector('#capture-btn'); btn?.click?.(); }
+});
+
+// Overlay helpers: draw a guide box based on enrolled size aspect ratio
+function drawOverlay() {
+  const checkbox = document.querySelector('#show-overlay');
+  if (!checkbox || !checkbox.checked) { clearOverlay(); return; }
+  if (!overlayCanvas) return;
+  const seg = state.plan[state.currentIndex];
+  if (!seg) { clearOverlay(); return; }
+  const ref = getEnrollMap()[seg.machine];
+  if (!ref || !ref.size) { clearOverlay(); return; }
+
+  const [rw, rh] = ref.size || [3, 4];
+  const aspect = rw / rh;
+  const w = overlayCanvas.clientWidth || overlayCanvas.offsetWidth;
+  const h = overlayCanvas.clientHeight || overlayCanvas.offsetHeight;
+  if (!w || !h) return;
+  overlayCanvas.width = w; overlayCanvas.height = h;
+  const ctx = overlayCanvas.getContext('2d');
+  ctx.clearRect(0, 0, w, h);
+  ctx.strokeStyle = 'rgba(106,167,255,0.9)';
+  ctx.lineWidth = 2;
+  let gw = w * 0.8;
+  let gh = gw / aspect;
+  if (gh > h * 0.8) { gh = h * 0.8; gw = gh * aspect; }
+  const gx = (w - gw) / 2; const gy = (h - gh) / 2;
+  ctx.strokeRect(gx, gy, gw, gh);
+  ctx.setLineDash([6, 6]);
+  ctx.beginPath();
+  ctx.moveTo(gx + gw / 2, gy); ctx.lineTo(gx + gw / 2, gy + gh);
+  ctx.moveTo(gx, gy + gh / 2); ctx.lineTo(gx + gw, gy + gh / 2);
+  ctx.stroke();
+}
+
+function clearOverlay() {
+  if (!overlayCanvas) return;
+  const w = overlayCanvas.width; const h = overlayCanvas.height;
+  const ctx = overlayCanvas.getContext('2d');
+  if (!ctx) return;
+  ctx.clearRect(0, 0, w, h);
+}
 
 // Firebase minimal integration (auth + Firestore). Configure in firebase-config.js
 async function initFirebaseAuth() {

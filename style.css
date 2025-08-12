@@ -83,7 +83,9 @@ input::placeholder { color: #6a7aa9; }
   padding: 10px 14px;
   border-radius: 12px;
   font-weight: 600;
+  cursor: pointer;
 }
+.btn:disabled { cursor: not-allowed; opacity: 0.6; }
 .btn.primary { background: var(--primary); color: #0a1022; border-color: var(--primary-600); }
 .btn.primary:disabled { opacity: 0.5; }
 .btn.ghost { background: transparent; }
@@ -115,6 +117,7 @@ video#camera-stream, #test-video {
   height: 100%;
   pointer-events: none;
 }
+.camera .row.actions { position: relative; z-index: 2; }
 .camera video#enroll-video {
   width: 100%;
   background: #070b16;
