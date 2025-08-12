@@ -110,7 +110,19 @@ function getEnrollMap() {
 
 function setEnroll(machineName, payload) {
   const map = getEnrollMap();
-  map[machineName] = payload; // { hash, size:[w,h] }
+  const existing = map[machineName];
+  // Support multi-reference: store as { hashes: [{d, a}], size: [w,h] }
+  if (existing && Array.isArray(existing.hashes)) {
+    existing.hashes.push(payload);
+    map[machineName] = existing;
+  } else if (existing && existing.hash) {
+    // Migrate single to multi
+    map[machineName] = { hashes: [{ d: existing.hash, a: existing.a || "" }, payload], size: existing.size };
+  } else if (existing && !existing.hash && !Array.isArray(existing.hashes)) {
+    map[machineName] = { hashes: [payload], size: existing.size };
+  } else {
+    map[machineName] = { hashes: [payload], size: payload.size };
+  }
   localStorage.setItem(LS_KEYS.ENROLL, JSON.stringify(map));
 }
 
@@ -177,8 +189,9 @@ function renderMachinesChips() {
   machines.forEach((name, idx) => {
     const el = document.createElement("span");
     el.className = "chip";
-    const enrolled = !!getEnrollMap()[name];
-    const badge = enrolled ? "✅" : "⚠";
+    const ref = getEnrollMap()[name];
+    const count = ref ? (Array.isArray(ref.hashes) ? ref.hashes.length : ref.hash ? 1 : 0) : 0;
+    const badge = count > 0 ? `✅ (${count})` : "⚠";
     el.innerHTML = `${name} <small style="opacity:.7">${badge}</small> <button class="btn ghost" data-enroll="${idx}">Enroll</button> <span class="x" data-idx="${idx}" aria-label="remove">✕</span>`;
     machinesList.appendChild(el);
   });
@@ -452,11 +465,28 @@ function bindEvents() {
     canvasEl.height = vh;
     const ctx = canvasEl.getContext("2d");
     ctx.drawImage(videoEl, 0, 0, vw, vh);
-    const liveHash = computeDHash(canvasEl, 9, 8); // 8x8 dHash
-    const distance = hammingDistanceHex(liveHash, ref.hash);
-    const threshold = 12; // tune as needed
-    if (distance > threshold) {
-      alert("Machine does not match enrolled reference. Align and try again.");
+    const liveD = computeDHash(canvasEl, 9, 8); // 8x8 dHash
+    const liveA = computeAHash(canvasEl, 8, 8);
+
+    let passed = false;
+    let best = Infinity;
+    const refs = Array.isArray(ref.hashes)
+      ? ref.hashes
+      : (ref.hash ? [{ d: ref.hash, a: ref.a || "" }] : []);
+    const thresholdD = 20; // looser to reduce false negatives
+    const thresholdSum = 30; // d + a combined threshold
+    for (const r of refs) {
+      const dDist = hammingDistanceHex(liveD, r.d);
+      const aDist = r.a ? hammingDistanceHex(liveA, r.a) : 0;
+      const combined = dDist + aDist;
+      best = Math.min(best, combined);
+      if ((r.a && combined <= thresholdSum) || (!r.a && dDist <= thresholdD)) {
+        passed = true;
+        break;
+      }
+    }
+    if (!passed) {
+      alert(`Machine not matched. Try aligning similarly to enrollment. (score ${best.toFixed(0)})`);
       return;
     }
 
@@ -525,10 +555,11 @@ function bindEvents() {
     enrollCanvas.height = vh;
     const ctx = enrollCanvas.getContext("2d");
     ctx.drawImage(enrollVideo, 0, 0, vw, vh);
-    const hash = computeDHash(enrollCanvas, 9, 8);
-    setEnroll(enrollingMachine, { hash, size: [vw, vh] });
+    const d = computeDHash(enrollCanvas, 9, 8);
+    const a = computeAHash(enrollCanvas, 8, 8);
+    setEnroll(enrollingMachine, { d, a, size: [vw, vh] });
     renderMachinesChips();
-    alert(`Reference saved for ${enrollingMachine}.`);
+    alert(`Reference saved for ${enrollingMachine}. Capture additional angles if needed.`);
   });
   enrollDoneBtn.addEventListener("click", () => {
     hide(enrollSection);
@@ -728,5 +759,41 @@ function hammingDistanceHex(a, b) {
     dist += v;
   }
   return dist;
+}
+
+// Average hash (aHash)
+function computeAHash(canvas, width, height) {
+  const w = width;
+  const h = height;
+  const tmp = document.createElement("canvas");
+  tmp.width = w;
+  tmp.height = h;
+  const tctx = tmp.getContext("2d");
+  tctx.drawImage(canvas, 0, 0, w, h);
+  const img = tctx.getImageData(0, 0, w, h).data;
+  const gray = new Array(w * h);
+  let sum = 0;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      const r = img[i], g = img[i + 1], b = img[i + 2];
+      const gval = 0.299 * r + 0.587 * g + 0.114 * b;
+      gray[y * w + x] = gval;
+      sum += gval;
+    }
+  }
+  const avg = sum / (w * h);
+  const bits = [];
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      bits.push(gray[y * w + x] >= avg ? 1 : 0);
+    }
+  }
+  let hex = "";
+  for (let i = 0; i < bits.length; i += 4) {
+    const nibble = (bits[i] << 3) | (bits[i + 1] << 2) | (bits[i + 2] << 1) | bits[i + 3];
+    hex += nibble.toString(16);
+  }
+  return hex;
 }
 
