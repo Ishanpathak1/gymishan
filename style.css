@@ -99,13 +99,21 @@ input::placeholder { color: #6a7aa9; }
 .danger-text { color: var(--danger); }
 
 .camera { display: grid; gap: 10px; }
-video#camera-stream {
+.camera-box { position: relative; }
+video#camera-stream, #test-video {
   width: 100%;
   background: #070b16;
   border: 1px solid #1a2547;
   border-radius: 12px;
   aspect-ratio: 3/4;
   object-fit: cover;
+}
+#overlay-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
 }
 .camera video#enroll-video {
   width: 100%;

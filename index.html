@@ -71,6 +71,7 @@
         <div class="hint">Order is locked for this session.</div>
         <div class="row actions">
           <button id="start-session" class="btn primary">Start session</button>
+          <button id="delete-plan" class="btn danger outline">Delete plan</button>
         </div>
       </section>
 
@@ -83,12 +84,18 @@
         </div>
 
         <div class="camera">
-          <video id="camera-stream" playsinline autoplay muted></video>
+          <div class="camera-box">
+            <video id="camera-stream" playsinline autoplay muted></video>
+            <canvas id="overlay-canvas" aria-hidden="true"></canvas>
+          </div>
           <canvas id="capture-canvas" class="hidden" aria-hidden="true"></canvas>
           <div class="row actions">
             <button id="open-camera" class="btn">Open camera</button>
             <button id="capture-btn" class="btn primary" disabled>Capture proof</button>
             <button id="close-camera" class="btn ghost" hidden>Close</button>
+          </div>
+          <div class="row">
+            <label><input type="checkbox" id="show-overlay" /> Show alignment overlay (uses enrolled aspect)</label>
           </div>
         </div>
       </section>
@@ -124,6 +131,27 @@
           <li>Second segment's timer starts when you capture the first photo.</li>
           <li>Images are not uploaded or stored; only timestamps are saved locally.</li>
         </ul>
+      </section>
+
+      <section class="card" id="dev-section" hidden>
+        <h2>Dev tools – Match test</h2>
+        <div class="row">
+          <label for="test-machine">Machine</label>
+          <select id="test-machine"></select>
+        </div>
+        <div class="camera">
+          <div class="camera-box">
+            <video id="test-video" playsinline autoplay muted></video>
+          </div>
+          <canvas id="test-canvas" class="hidden" aria-hidden="true"></canvas>
+          <div class="row actions">
+            <button id="test-open" class="btn">Open camera</button>
+            <button id="test-capture" class="btn primary" disabled>Test capture</button>
+            <button id="test-close" class="btn ghost" hidden>Close</button>
+            <button id="toggle-dev" class="btn ghost">Hide</button>
+          </div>
+        </div>
+        <div id="test-result" class="subtitle"></div>
       </section>
     </main>
 

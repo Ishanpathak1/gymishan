@@ -54,6 +54,7 @@ const openCameraBtn = $("#open-camera");
 const captureBtn = $("#capture-btn");
 const closeCameraBtn = $("#close-camera");
 const videoEl = $("#camera-stream");
+const overlayCanvas = document.querySelector('#overlay-canvas');
 const canvasEl = $("#capture-canvas");
 const doneSection = $("#done-section");
 const newPlanBtn = $("#new-plan");
@@ -285,6 +286,7 @@ async function openCamera() {
     openCameraBtn.disabled = true;
     closeCameraBtn.hidden = false;
     captureBtn.disabled = false;
+    drawOverlay();
   } catch (e) {
     alert("Camera permission is required. Please enable it in your browser settings.");
   }
@@ -296,6 +298,7 @@ function closeCamera() {
     state.cameraStream = null;
   }
   videoEl.srcObject = null;
+  clearOverlay();
   openCameraBtn.disabled = false;
   closeCameraBtn.hidden = true;
   captureBtn.disabled = true;
@@ -401,6 +404,20 @@ function bindEvents() {
     saveSessionSnapshot();
   });
 
+  // Delete plan
+  const deletePlanBtn = document.querySelector('#delete-plan');
+  if (deletePlanBtn) {
+    deletePlanBtn.addEventListener('click', () => {
+      state.plan = [];
+      planList.innerHTML = '';
+      hide(planSection);
+      hide(sessionSection);
+      hide(doneSection);
+      setButtonsDuringSession(false);
+      clearSessionSnapshot();
+    });
+  }
+
   resetBtn.addEventListener("click", () => {
     state = {
       plan: [],
@@ -441,6 +458,10 @@ function bindEvents() {
 
   openCameraBtn.addEventListener("click", openCamera);
   closeCameraBtn.addEventListener("click", closeCamera);
+
+  // Overlay toggle
+  const showOverlay = document.querySelector('#show-overlay');
+  if (showOverlay) showOverlay.addEventListener('change', drawOverlay);
 
   captureBtn.addEventListener("click", () => {
     if (!state.cameraStream || !state.segmentStartAt) return;
@@ -570,6 +591,77 @@ function bindEvents() {
       enrollVideo.srcObject = null;
     }
   });
+
+  // Dev tools
+  const devSection = document.querySelector('#dev-section');
+  const testMachineSelect = document.querySelector('#test-machine');
+  const testVideo = document.querySelector('#test-video');
+  const testCanvas = document.querySelector('#test-canvas');
+  const testOpen = document.querySelector('#test-open');
+  const testCapture = document.querySelector('#test-capture');
+  const testClose = document.querySelector('#test-close');
+  const testResult = document.querySelector('#test-result');
+  const toggleDev = document.querySelector('#toggle-dev');
+  let testStream = null;
+
+  // Show dev tools only if URL has ?dev=1
+  const params = new URLSearchParams(location.search);
+  if (params.get('dev') === '1' && devSection) {
+    devSection.hidden = false;
+    populateTestMachines();
+  }
+  toggleDev?.addEventListener('click', () => {
+    if (devSection) devSection.hidden = true;
+  });
+  function populateTestMachines() {
+    if (!testMachineSelect) return;
+    testMachineSelect.innerHTML = '';
+    loadMachines().forEach((m) => {
+      const opt = document.createElement('option');
+      opt.value = m;
+      opt.textContent = m;
+      testMachineSelect.appendChild(opt);
+    });
+  }
+  testOpen?.addEventListener('click', async () => {
+    try {
+      testStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+      if (testVideo) testVideo.srcObject = testStream;
+      if (testOpen) testOpen.disabled = true;
+      if (testClose) testClose.hidden = false;
+      if (testCapture) testCapture.disabled = false;
+    } catch (e) { alert('Camera permission is required.'); }
+  });
+  testClose?.addEventListener('click', () => {
+    if (testStream) { testStream.getTracks().forEach(t => t.stop()); testStream = null; }
+    if (testVideo) testVideo.srcObject = null;
+    if (testOpen) testOpen.disabled = false;
+    if (testClose) testClose.hidden = true;
+    if (testCapture) testCapture.disabled = true;
+  });
+  testCapture?.addEventListener('click', () => {
+    if (!testVideo || !testCanvas) return;
+    const machine = testMachineSelect?.value;
+    const enrollMap = getEnrollMap();
+    const ref = enrollMap[machine];
+    if (!ref) { if (testResult) testResult.textContent = 'No reference enrolled.'; return; }
+    const vw = testVideo.videoWidth || 720;
+    const vh = testVideo.videoHeight || 1280;
+    testCanvas.width = vw; testCanvas.height = vh;
+    const ctx = testCanvas.getContext('2d');
+    ctx.drawImage(testVideo, 0, 0, vw, vh);
+    const liveD = computeDHash(testCanvas, 9, 8);
+    const liveA = computeAHash(testCanvas, 8, 8);
+    const refs = Array.isArray(ref.hashes) ? ref.hashes : (ref.hash ? [{ d: ref.hash, a: ref.a || '' }] : []);
+    let best = Infinity; let passed = false; let bestPair = [Infinity, Infinity];
+    for (const r of refs) {
+      const dDist = hammingDistanceHex(liveD, r.d);
+      const aDist = r.a ? hammingDistanceHex(liveA, r.a) : 0;
+      if (dDist + aDist < best) { best = dDist + aDist; bestPair = [dDist, aDist]; }
+      if ((r.a && (dDist + aDist) <= 30) || (!r.a && dDist <= 20)) { passed = true; }
+    }
+    if (testResult) testResult.textContent = `Match: ${passed ? 'PASS' : 'FAIL'} (d=${bestPair[0] ?? '-'}, a=${bestPair[1] ?? '-'}, sum=${best})`;
+  });
 }
 
 function initFromSnapshotIfAny() {
@@ -587,6 +679,7 @@ function initFromSnapshotIfAny() {
     segmentTitle.textContent = `Segment ${state.currentIndex + 1}/${state.plan.length}: ${state.plan[state.currentIndex].machine} – ${state.plan[state.currentIndex].minutes} min`;
     if (rafId) cancelAnimationFrame(rafId);
     tick();
+    drawOverlay();
   }
 }
 
