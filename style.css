@@ -31,6 +31,7 @@ html, body {
 .header-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .app-header h1 { margin: 0; font-size: 20px; letter-spacing: 0.3px; }
 .subtitle { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+.hint, #ocr-result { color: var(--muted); font-size: 12px; }
 .auth { display: inline-flex; gap: 8px; align-items: center; }
 .user-badge { color: var(--muted); font-size: 12px; }
 

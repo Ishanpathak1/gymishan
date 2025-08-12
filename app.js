@@ -56,6 +56,8 @@ const closeCameraBtn = $("#close-camera");
 const videoEl = $("#camera-stream");
 const overlayCanvas = document.querySelector('#overlay-canvas');
 const canvasEl = $("#capture-canvas");
+const enableOcrChk = document.querySelector('#enable-ocr');
+const ocrResultEl = document.querySelector('#ocr-result');
 const doneSection = $("#done-section");
 const newPlanBtn = $("#new-plan");
 // Auth UI
@@ -274,6 +276,9 @@ function tick() {
     statusLabel.textContent = `Within window. Capture allowed.`;
     captureBtn.disabled = !state.cameraStream;
   }
+
+  // Update camera overlay to show aim + live elapsed
+  drawOverlay();
 
   rafId = requestAnimationFrame(tick);
 }
@@ -535,6 +540,15 @@ function bindEvents() {
       return;
     }
 
+    // Optional: OCR timer detection (beta)
+    if (enableOcrChk && enableOcrChk.checked) {
+      detectTimerOCR(canvasEl).then((text) => {
+        if (ocrResultEl) ocrResultEl.textContent = text ? `Timer detected: ${text}` : 'No timer detected';
+      }).catch(() => {
+        if (ocrResultEl) ocrResultEl.textContent = 'OCR error';
+      });
+    }
+
     // Mark segment as completed; start next segment timer now (time-gated start)
     state.currentIndex += 1;
     if (state.currentIndex >= state.plan.length) {
@@ -761,6 +775,26 @@ function drawOverlay() {
   ctx.moveTo(gx + gw / 2, gy); ctx.lineTo(gx + gw / 2, gy + gh);
   ctx.moveTo(gx, gy + gh / 2); ctx.lineTo(gx + gw, gy + gh / 2);
   ctx.stroke();
+
+  // Target and live time labels
+  ctx.setLineDash([]);
+  ctx.font = 'bold 20px ui-sans-serif, system-ui, -apple-system';
+  ctx.fillStyle = 'rgba(230,237,247,0.95)';
+  const segMinutes = seg.minutes;
+  const elapsedSec = state.segmentStartAt ? Math.floor((Date.now() - state.segmentStartAt) / 1000) : 0;
+  const targetMMSS = formatMMSS(segMinutes * 60);
+  const liveMMSS = formatMMSS(elapsedSec);
+  const within = elapsedSec >= state.windowStartSec && elapsedSec <= state.windowEndSec;
+  ctx.fillText(`Aim: ${targetMMSS}  |  Live: ${liveMMSS}`, gx + 8, gy - 10 < 20 ? gy + 24 : gy - 10);
+  // Window badge bottom-right of guide
+  ctx.fillStyle = within ? 'rgba(96,211,148,0.95)' : 'rgba(255,106,106,0.95)';
+  const badge = within ? 'Within window' : 'Wait...';
+  const metrics = ctx.measureText(badge);
+  const bw = metrics.width + 16; const bh = 26;
+  const bx = gx + gw - bw; const by = gy + gh + 10 > h - 10 ? gy + gh - 10 - bh : gy + gh + 10;
+  ctx.fillRect(bx, by, bw, bh);
+  ctx.fillStyle = 'rgba(10,16,34,0.95)';
+  ctx.fillText(badge, bx + 8, by + 18);
 }
 
 function clearOverlay() {
@@ -769,6 +803,49 @@ function clearOverlay() {
   const ctx = overlayCanvas.getContext('2d');
   if (!ctx) return;
   ctx.clearRect(0, 0, w, h);
+}
+
+// Lightweight OCR: detect timer digits using Tesseract.js (loaded lazily via CDN)
+async function detectTimerOCR(canvas) {
+  // Define ROI: center stripe where timer typically resides
+  const w = canvas.width, h = canvas.height;
+  const roiW = Math.floor(w * 0.6);
+  const roiH = Math.floor(h * 0.2);
+  const x = Math.floor((w - roiW) / 2);
+  const y = Math.floor((h - roiH) / 2);
+  const roi = document.createElement('canvas');
+  roi.width = roiW; roi.height = roiH;
+  const rctx = roi.getContext('2d');
+  rctx.drawImage(canvas, x, y, roiW, roiH, 0, 0, roiW, roiH);
+
+  // Preprocess: grayscale + increase contrast
+  const imgData = rctx.getImageData(0, 0, roiW, roiH);
+  const d = imgData.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const g = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+    const high = g > 160 ? 255 : (g < 80 ? 0 : g);
+    d[i] = d[i + 1] = d[i + 2] = high;
+  }
+  rctx.putImageData(imgData, 0, 0);
+
+  // Lazy load Tesseract only when needed
+  if (!window.Tesseract) {
+    await new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://unpkg.com/tesseract.js@5.1.0/dist/tesseract.min.js';
+      s.onload = resolve; s.onerror = reject; document.head.appendChild(s);
+    });
+  }
+
+  const { createWorker } = window.Tesseract;
+  const worker = await createWorker('eng', 1, { logger: () => {} });
+  const { data: { text } } = await worker.recognize(roi);
+  await worker.terminate();
+
+  // Extract a time-like token, e.g., 27:32 or 27, 27.3 etc.
+  const cleaned = String(text || '').replace(/\s+/g, ' ').trim();
+  const match = cleaned.match(/(\d{1,2}\s*[:\.\-]\s*\d{1,2}|\b\d{1,3}\b)/);
+  return match ? match[0].replace(/\s+/g, '') : '';
 }
 
 // Firebase minimal integration (auth + Firestore). Configure in firebase-config.js
